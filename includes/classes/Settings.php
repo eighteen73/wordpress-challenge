@@ -16,7 +16,7 @@ class Settings {
 	use Singleton;
 
 	/** Settings API option name. */
-	public const OPTION = 'e73_challenge';
+	public const OPTION = 'form_challenge';
 	/** Provider labels. */
 	public const DRIVERS = [
 		'cap'          => 'Cap',
@@ -39,8 +39,8 @@ class Settings {
 	 * @param string $hook Admin page identifier.
 	 */
 	public function enqueue( string $hook ): void {
-		if ( 'settings_page_e73-challenge' === $hook ) {
-			wp_enqueue_script( 'e73-challenge-settings', CHALLENGE_URL . 'assets/settings.js', [], '0.1.0', true );
+		if ( 'settings_page_form-challenge' === $hook ) {
+			wp_enqueue_script( 'form-challenge-settings', CHALLENGE_URL . 'assets/settings.js', [], '0.1.0', true );
 		}
 	}
 
@@ -60,21 +60,21 @@ class Settings {
 
 	/** Add the settings page under Settings. */
 	public function menu(): void {
-		add_options_page( __( 'Challenge', 'challenge' ), __( 'Challenge', 'challenge' ), 'manage_options', 'e73-challenge', [ $this, 'page' ] );
+		add_options_page( __( 'Challenge', 'challenge' ), __( 'Challenge', 'challenge' ), 'manage_options', 'form-challenge', [ $this, 'page' ] );
 	}
 
 	/** Register native controls for the site-wide provider. */
 	public function register(): void {
 		register_setting(
-			'e73_challenge',
+			'form_challenge',
 			self::OPTION,
 			[
 				'sanitize_callback' => [ $this, 'sanitize' ],
 				'type'              => 'object',
 			]
 		);
-		add_settings_section( 'e73_challenge_credentials', __( 'CAPTCHA provider', 'challenge' ), '__return_null', 'e73-challenge' );
-		add_settings_field( 'driver', __( 'Provider', 'challenge' ), [ $this, 'field' ], 'e73-challenge', 'e73_challenge_credentials', [ 'name' => 'driver' ] );
+		add_settings_section( 'form_challenge_credentials', __( 'CAPTCHA provider', 'challenge' ), '__return_null', 'form-challenge' );
+		add_settings_field( 'driver', __( 'Provider', 'challenge' ), [ $this, 'field' ], 'form-challenge', 'form_challenge_credentials', [ 'name' => 'driver' ] );
 		$selected = self::options()['driver'];
 		foreach ( self::DRIVERS as $provider => $label ) {
 			$fields = match ( $provider ) {
@@ -96,18 +96,18 @@ class Settings {
 					$name,
 					$title,
 					[ $this, 'field' ],
-					'e73-challenge',
-					'e73_challenge_credentials',
+					'form-challenge',
+					'form_challenge_credentials',
 					[
 						'name'  => $name,
-						'class' => 'e73-challenge-provider e73-challenge-provider-' . $provider . ( $provider === $selected ? '' : ' hidden' ),
+						'class' => 'form-challenge-provider form-challenge-provider-' . $provider . ( $provider === $selected ? '' : ' hidden' ),
 					]
 				);
 			}
 		}
 		if ( $this->gravity_forms_available() ) {
-			add_settings_section( 'e73_challenge_gravity_forms', __( 'Gravity Forms', 'challenge' ), '__return_null', 'e73-challenge' );
-			add_settings_field( 'gf_all', __( 'Automatic protection', 'challenge' ), [ $this, 'field' ], 'e73-challenge', 'e73_challenge_gravity_forms', [ 'name' => 'gf_all' ] );
+			add_settings_section( 'form_challenge_gravity_forms', __( 'Gravity Forms', 'challenge' ), '__return_null', 'form-challenge' );
+			add_settings_field( 'gf_all', __( 'Automatic protection', 'challenge' ), [ $this, 'field' ], 'form-challenge', 'form_challenge_gravity_forms', [ 'name' => 'gf_all' ] );
 		}
 	}
 
@@ -176,7 +176,7 @@ class Settings {
 	public function field( array $args ): void {
 		$name    = $args['name'];
 		$options = self::options();
-		$id      = 'e73-challenge-' . $name;
+		$id      = 'form-challenge-' . $name;
 		if ( 'driver' === $name ) {
 			printf( '<select id="%s" name="%s[driver]">', esc_attr( $id ), esc_attr( self::OPTION ) );
 			foreach ( self::DRIVERS as $value => $label ) {
@@ -265,8 +265,8 @@ class Settings {
 			echo '<li>' . esc_html( $place ) . '</li>';
 		}
 		echo '</ul><form action="options.php" method="post">';
-		settings_fields( 'e73_challenge' );
-		do_settings_sections( 'e73-challenge' );
+		settings_fields( 'form_challenge' );
+		do_settings_sections( 'form-challenge' );
 		submit_button();
 		echo '</form></div>';
 	}
@@ -276,6 +276,6 @@ class Settings {
 		if ( ! current_user_can( 'manage_options' ) || Challenge::instance()->active() ) {
 			return;
 		}
-		printf( '<div class="notice notice-warning"><p>%s <a href="%s">%s</a></p></div>', esc_html__( 'Challenge is not protecting submissions until the selected provider is configured.', 'challenge' ), esc_url( admin_url( 'options-general.php?page=e73-challenge' ) ), esc_html__( 'Configure Challenge', 'challenge' ) );
+		printf( '<div class="notice notice-warning"><p>%s <a href="%s">%s</a></p></div>', esc_html__( 'Challenge is not protecting submissions until the selected provider is configured.', 'challenge' ), esc_url( admin_url( 'options-general.php?page=form-challenge' ) ), esc_html__( 'Configure Challenge', 'challenge' ) );
 	}
 }

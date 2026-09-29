@@ -21,7 +21,7 @@ for (const script of ['challenge.js', 'checkout.js']) {
 	};
 	const window = {
 		jQuery: () => ({ on: (event, callback) => { errorHandler = callback; } }),
-		e73Challenge: { setToken: (element, token) => { element.dataset.token = token; } },
+		formChallenge: { setToken: (element, token) => { element.dataset.token = token; } },
 	};
 	const wp = { plugins: { registerPlugin: () => {} }, element: { createElement: () => {} } };
 	const wc = { blocksCheckout: { ExperimentalOrderMeta: () => {} } };

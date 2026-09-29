@@ -64,17 +64,17 @@ class Cap extends Remote {
 	/** Initialise Cap's asset overrides before the widget and floating behaviour afterwards. */
 	public function enqueue(): void {
 		$base = $this->assets_base();
-		if ( ! wp_script_is( 'e73-challenge-provider-0', 'enqueued' ) ) {
-			wp_enqueue_script( 'e73-challenge-provider-0', $base . 'widget.js', [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Provider-managed asset.
+		if ( ! wp_script_is( 'form-challenge-provider-0', 'enqueued' ) ) {
+			wp_enqueue_script( 'form-challenge-provider-0', $base . 'widget.js', [], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Provider-managed asset.
 			wp_add_inline_script(
-				'e73-challenge-provider-0',
+				'form-challenge-provider-0',
 				'Object.assign(window, ' . wp_json_encode( $this->asset_urls(), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT ) . ');',
 				'before'
 			);
 		}
-		wp_enqueue_script( 'e73-challenge', CHALLENGE_URL . 'assets/challenge.js', [ 'e73-challenge-provider-0' ], '0.1.0', true );
+		wp_enqueue_script( 'form-challenge', CHALLENGE_URL . 'assets/challenge.js', [ 'form-challenge-provider-0' ], '0.1.0', true );
 		if ( 'visible' !== ( $this->options['cap_display'] ?? 'floating' ) ) {
-			wp_enqueue_script( 'e73-challenge-floating', $base . 'floating.js', [ 'e73-challenge' ], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Provider-managed asset.
+			wp_enqueue_script( 'form-challenge-floating', $base . 'floating.js', [ 'form-challenge' ], null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Provider-managed asset.
 		}
 	}
 
@@ -102,7 +102,7 @@ class Cap extends Remote {
 	public function render( string $context, bool $inline = false ): string {
 		$floating = ! $inline && 'visible' !== ( $this->options['cap_display'] ?? 'floating' );
 		return sprintf(
-			'<div class="e73-challenge" data-challenge="cap" data-context="%s" data-floating="%s"><cap-widget data-cap-api-endpoint="%s"></cap-widget></div>',
+			'<div class="form-challenge" data-challenge="cap" data-context="%s" data-floating="%s"><cap-widget data-cap-api-endpoint="%s"></cap-widget></div>',
 			esc_attr( $context ),
 			$floating ? 'true' : 'false',
 			esc_url( $this->endpoint() )

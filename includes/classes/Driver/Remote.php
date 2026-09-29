@@ -18,11 +18,11 @@ abstract class Remote implements Driver {
 	public function enqueue(): void {
 		$dependencies = [];
 		foreach ( $this->scripts() as $index => $url ) {
-			$handle = 'e73-challenge-provider-' . $index;
+			$handle = 'form-challenge-provider-' . $index;
 			wp_enqueue_script( $handle, $url, $dependencies, null, true ); // phpcs:ignore WordPress.WP.EnqueuedResourceParameters.MissingVersion -- Provider-managed asset.
 			$dependencies = [ $handle ];
 		}
-		wp_enqueue_script( 'e73-challenge', CHALLENGE_URL . 'assets/challenge.js', $dependencies, '0.1.0', true );
+		wp_enqueue_script( 'form-challenge', CHALLENGE_URL . 'assets/challenge.js', $dependencies, '0.1.0', true );
 	}
 
 	/**

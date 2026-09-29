@@ -111,6 +111,7 @@ namespace {
 	define( 'ABSPATH', '/' );
 	define( 'CHALLENGE_URL', 'https://example.org/wp-content/plugins/challenge/' );
 	class GFForms {}
+	class GF_Field {}
 
 	class WP_Error {
 		public function __construct( public string $code, public string $message ) {}
@@ -141,6 +142,7 @@ namespace {
 	require __DIR__ . '/../includes/classes/Settings.php';
 	require __DIR__ . '/../includes/classes/Challenge.php';
 	require __DIR__ . '/../includes/classes/GravityForms.php';
+	require __DIR__ . '/../includes/classes/GravityField.php';
 	require __DIR__ . '/../includes/classes/WooCommerce.php';
 
 	function check( bool $condition, string $case ): void {
@@ -198,10 +200,11 @@ namespace {
 	check( 'https://cap.example.test/captcha/site/siteverify' === $GLOBALS['challenge_request'][0], 'Cap verifies against the configured server and site' );
 
 	$GLOBALS['challenge_options'] = [ 'driver' => 'cap', 'cap_server' => 'https://cap.example.test/captcha', 'cap_site' => 'site', 'cap_secret' => 'secret', 'gf_all' => 0 ];
+	check( 'form_challenge' === \Eighteen73\Challenge\Settings::OPTION && 'form_challenge' === ( new \Eighteen73\Challenge\GravityField() )->type, 'settings and saved Gravity Forms fields use the unbranded identifier' );
 	$gravity = \Eighteen73\Challenge\GravityForms::instance();
 	$form = [ 'id' => 12, 'fields' => [] ];
 	check( $gravity->validate( [ 'is_valid' => true, 'form' => $form ] )['is_valid'], 'field-only mode leaves forms without a Challenge field unprotected' );
-	$form['fields'] = [ (object) [ 'type' => 'e73_challenge' ] ];
+	$form['fields'] = [ (object) [ 'type' => 'form_challenge' ] ];
 	check( ! $gravity->validate( [ 'is_valid' => true, 'form' => $form ] )['is_valid'], 'field-only mode rejects unverified opted-in forms' );
 	$GLOBALS['challenge_options']['gf_all'] = 1;
 	check( ! $gravity->validate( [ 'is_valid' => true, 'form' => [ 'id' => 13, 'fields' => [] ] ] )['is_valid'], 'automatic mode rejects unverified forms without a field' );
@@ -215,18 +218,18 @@ namespace {
 	check( 'floating' === $settings::options()['cap_display'], 'sites without a saved display setting keep floating presentation' );
 	$GLOBALS['challenge_enqueued'] = [];
 	\Eighteen73\Challenge\Challenge::instance()->enqueue();
-	check( isset( $GLOBALS['challenge_enqueued']['e73-challenge-floating'] ), 'floating presentation loads the floating script' );
-	check( [ 'e73-challenge' ] === $GLOBALS['challenge_dependencies']['e73-challenge-floating'] && [ 'e73-challenge-provider-0' ] === $GLOBALS['challenge_dependencies']['e73-challenge'], 'Cap declares widget, integration and floating execution order' );
+	check( isset( $GLOBALS['challenge_enqueued']['form-challenge-floating'] ), 'floating presentation loads the floating script' );
+	check( [ 'form-challenge' ] === $GLOBALS['challenge_dependencies']['form-challenge-floating'] && [ 'form-challenge-provider-0' ] === $GLOBALS['challenge_dependencies']['form-challenge'], 'Cap declares widget, integration and floating execution order' );
 	\Eighteen73\Challenge\Challenge::instance()->enqueue();
 	check( 1 === $GLOBALS['challenge_inline_count'], 'multiple forms emit Cap asset overrides only once per request' );
-	$inline = $GLOBALS['challenge_inline']['e73-challenge-provider-0'];
+	$inline = $GLOBALS['challenge_inline']['form-challenge-provider-0'];
 	check( 'before' === $inline[1] && 1 === preg_match( '/^Object\.assign\(window, (.+)\);$/', $inline[0], $matches ), 'Cap configures secondary assets before widget.js executes' );
 	check( $cap->asset_urls() === json_decode( $matches[1], true ) && ! str_contains( $inline[0], 'jsdelivr.net' ), 'Cap browser asset overrides all use the configured server' );
 	$GLOBALS['challenge_options']['cap_display'] = 'visible';
 	$GLOBALS['challenge_enqueued'] = [];
 	$GLOBALS['challenge_inline_count'] = 0;
 	\Eighteen73\Challenge\Challenge::instance()->enqueue();
-	check( ! isset( $GLOBALS['challenge_enqueued']['e73-challenge-floating'] ) && isset( $GLOBALS['challenge_enqueued']['e73-challenge-provider-0'] ), 'visible presentation loads only the widget script' );
+	check( ! isset( $GLOBALS['challenge_enqueued']['form-challenge-floating'] ) && isset( $GLOBALS['challenge_enqueued']['form-challenge-provider-0'] ), 'visible presentation loads only the widget script' );
 	check( 1 === $GLOBALS['challenge_inline_count'], 'multiple forms emit Cap asset overrides only once per request' );
 	$saved = $settings->sanitize( [ 'driver' => 'turnstile', 'turnstile_site' => 'other', 'gf_all' => 0 ] );
 	check( 0 === $saved['gf_all'] && 'site' === $saved['cap_site'] && 'secret' === $saved['cap_secret'] && 'https://cap.example.test/captcha' === $saved['cap_server'] && 'visible' === $saved['cap_display'], 'switching providers preserves Cap configuration and the GF opt-in setting' );
@@ -245,7 +248,7 @@ namespace {
 	check( $woo->store_checkout( null, [], $missing ) instanceof WP_Error, 'guest Store API checkout rejects missing tokens before processing' );
 	$other_route = new WP_REST_Request( 'POST', '/wc/store/v1/cart' );
 	check( null === $woo->store_checkout( null, [], $other_route ), 'other Store API routes are unaffected' );
-	$valid = new WP_REST_Request( 'POST', '/wc/store/v1/checkout', [ 'extensions' => [ 'e73-challenge' => [ 'token' => 'fresh' ] ] ] );
+	$valid = new WP_REST_Request( 'POST', '/wc/store/v1/checkout', [ 'extensions' => [ 'form-challenge' => [ 'token' => 'fresh' ] ] ] );
 	check( null === $woo->store_checkout( null, [], $valid ), 'verified guest checkout reaches the route callback' );
 	print "Provider, settings and integration verification checks passed.\n";
 }

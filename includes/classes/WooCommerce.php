@@ -43,7 +43,7 @@ class WooCommerce {
 		$extend->register_endpoint_data(
 			[
 				'endpoint'        => \Automattic\WooCommerce\StoreApi\Schemas\V1\CheckoutSchema::IDENTIFIER,
-				'namespace'       => 'e73-challenge',
+				'namespace'       => 'form-challenge',
 				'schema_callback' => static fn(): array => [
 					'token' => [
 						'description' => __( 'Challenge verification token.', 'challenge' ),
@@ -107,7 +107,7 @@ class WooCommerce {
 			return $response;
 		}
 		$extensions = $request->get_param( 'extensions' );
-		$token      = is_array( $extensions ) && isset( $extensions['e73-challenge']['token'] ) && is_string( $extensions['e73-challenge']['token'] ) ? $extensions['e73-challenge']['token'] : '';
+		$token      = is_array( $extensions ) && isset( $extensions['form-challenge']['token'] ) && is_string( $extensions['form-challenge']['token'] ) ? $extensions['form-challenge']['token'] : '';
 		if ( ! Challenge::instance()->verify( 'wc_checkout', $token ) ) {
 			return new \WP_Error( 'challenge_failed', __( 'Verification failed. Please try again.', 'challenge' ), [ 'status' => 400 ] );
 		}
@@ -123,7 +123,7 @@ class WooCommerce {
 		if ( ! $page || ! has_block( 'woocommerce/checkout', $page ) ) {
 			return;
 		}
-		wp_enqueue_script( 'e73-challenge-checkout', CHALLENGE_URL . 'assets/checkout.js', [ 'e73-challenge', 'wp-plugins', 'wp-element', 'wp-data', 'wc-blocks-checkout' ], '0.1.0', true );
-		wp_add_inline_script( 'e73-challenge-checkout', 'window.e73ChallengeCheckout = ' . wp_json_encode( [ 'markup' => Challenge::instance()->driver()->render( 'wc_checkout' ) ] ) . ';', 'before' );
+		wp_enqueue_script( 'form-challenge-checkout', CHALLENGE_URL . 'assets/checkout.js', [ 'form-challenge', 'wp-plugins', 'wp-element', 'wp-data', 'wc-blocks-checkout' ], '0.1.0', true );
+		wp_add_inline_script( 'form-challenge-checkout', 'window.formChallengeCheckout = ' . wp_json_encode( [ 'markup' => Challenge::instance()->driver()->render( 'wc_checkout' ) ] ) . ';', 'before' );
 	}
 }

@@ -40,7 +40,7 @@ class GravityForms {
 	 */
 	private function has_field( array $form ): bool {
 		foreach ( $form['fields'] ?? [] as $field ) {
-			if ( 'e73_challenge' === $field->type ) {
+			if ( 'form_challenge' === $field->type ) {
 				return true;
 			}
 		}
@@ -102,7 +102,7 @@ class GravityForms {
 			$result['is_valid'] = false;
 			if ( $this->has_field( $form ) ) {
 				foreach ( $form['fields'] as $field ) {
-					if ( 'e73_challenge' === $field->type ) {
+					if ( 'form_challenge' === $field->type ) {
 						$field->failed_validation  = true;
 						$field->validation_message = __( 'Verification failed. Please try again.', 'challenge' );
 						break;

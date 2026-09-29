@@ -41,11 +41,11 @@ class Recaptcha extends Remote {
 	 */
 	public function render( string $context, bool $inline = false ): string {
 		return sprintf(
-			'<div class="e73-challenge" data-challenge="%s" data-context="%s" data-sitekey="%s">%s</div>',
+			'<div class="form-challenge" data-challenge="%s" data-context="%s" data-sitekey="%s">%s</div>',
 			esc_attr( $this->version ),
 			esc_attr( $context ),
 			esc_attr( $this->options[ $this->version . '_site' ] ),
-			'recaptcha_v2' === $this->version ? '<div class="e73-challenge-widget"></div>' : ''
+			'recaptcha_v2' === $this->version ? '<div class="form-challenge-widget"></div>' : ''
 		);
 	}
 

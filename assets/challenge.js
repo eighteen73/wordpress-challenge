@@ -2,14 +2,14 @@
 	'use strict';
 
 	let counter = 0;
-	const selectors = '.e73-challenge:not([data-initialised])';
+	const selectors = '.form-challenge:not([data-initialised])';
 
 	function tokenField(form) {
-		let input = form.querySelector('input[name="e73_challenge_token"]');
+		let input = form.querySelector('input[name="form_challenge_token"]');
 		if (!input) {
 			input = document.createElement('input');
 			input.type = 'hidden';
-			input.name = 'e73_challenge_token';
+			input.name = 'form_challenge_token';
 			form.append(input);
 		}
 		return input;
@@ -21,20 +21,20 @@
 		if (form) {
 			tokenField(form).value = token;
 		}
-		widget.dispatchEvent(new CustomEvent('e73-challenge-solved', { bubbles: true, detail: { token } }));
+		widget.dispatchEvent(new CustomEvent('form-challenge-solved', { bubbles: true, detail: { token } }));
 	}
 
 	function initialise(widget) {
 		const provider = widget.dataset.challenge;
 		const form = widget.closest('form');
-		const target = widget.querySelector('.e73-challenge-widget');
+		const target = widget.querySelector('.form-challenge-widget');
 		if (provider === 'cap') {
 			const cap = widget.querySelector('cap-widget');
 			if (widget.dataset.floating === 'true') {
 				const button = form?.querySelector('#place_order, .gform_button, button[type="submit"], input[type="submit"]') ||
 					(widget.dataset.context === 'wc_checkout' ? document.querySelector('.wc-block-components-checkout-place-order-button') : null);
 				if (!button) return;
-				cap.id = `e73-cap-${++counter}`;
+				cap.id = `form-challenge-cap-${++counter}`;
 				button.dataset.capFloating = `#${cap.id}`;
 			}
 			cap.addEventListener('solve', (event) => setToken(widget, event.detail.token));
@@ -65,12 +65,12 @@
 
 	document.addEventListener('submit', (event) => {
 		const form = event.target;
-		const widget = form.querySelector('.e73-challenge');
+		const widget = form.querySelector('.form-challenge');
 		if (!widget) return;
 		// The Checkout Block has its own place-order flow and Store API token transport.
 		if (widget.dataset.context === 'wc_checkout' && form.closest('.wc-block-checkout')) return;
 		const input = tokenField(form);
-		if (widget.dataset.challenge === 'recaptcha_v3' && !form.dataset.e73Submitting) {
+		if (widget.dataset.challenge === 'recaptcha_v3' && !form.dataset.formChallengeSubmitting) {
 			event.preventDefault();
 			event.stopImmediatePropagation();
 			if (!window.grecaptcha?.execute) return;
@@ -79,10 +79,10 @@
 				window.grecaptcha.execute(widget.dataset.sitekey, { action: widget.dataset.context })
 					.then((token) => {
 						setToken(widget, token);
-						form.dataset.e73Submitting = 'true';
+						form.dataset.formChallengeSubmitting = 'true';
 						form.requestSubmit(submitter || undefined);
 						window.setTimeout(() => {
-							delete form.dataset.e73Submitting;
+							delete form.dataset.formChallengeSubmitting;
 							input.value = '';
 						}, 1000);
 					}).catch(() => window.alert('Verification failed. Please try again.'));
@@ -106,7 +106,7 @@
 	new MutationObserver(scan).observe(document.documentElement, { childList: true, subtree: true });
 	if (window.jQuery) {
 		window.jQuery(document.body).on('checkout_error', () => {
-			const widget = document.querySelector('.woocommerce-checkout .e73-challenge');
+			const widget = document.querySelector('.woocommerce-checkout .form-challenge');
 			if (!widget) return;
 			setToken(widget, '');
 			if (widget.dataset.challenge === 'cap') widget.querySelector('cap-widget')?.reset();
@@ -114,5 +114,5 @@
 			if (widget.dataset.challenge === 'recaptcha_v2') window.grecaptcha?.reset(Number(widget.dataset.widgetId));
 		});
 	}
-	window.e73Challenge = { scan, setToken };
+	window.formChallenge = { scan, setToken };
 })();

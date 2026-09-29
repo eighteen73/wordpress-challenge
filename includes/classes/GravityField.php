@@ -16,7 +16,7 @@ class GravityField extends \GF_Field {
 	 *
 	 * @var string
 	 */
-	public $type = 'e73_challenge';
+	public $type = 'form_challenge';
 
 	/** Return the editor field title. */
 	public function get_form_editor_field_title(): string {

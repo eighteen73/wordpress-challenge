@@ -66,7 +66,7 @@ class Challenge {
 			return true;
 		}
 		if ( null === $token ) {
-			$token = isset( $_POST['e73_challenge_token'] ) && is_string( $_POST['e73_challenge_token'] ) ? sanitize_text_field( wp_unslash( $_POST['e73_challenge_token'] ) ) : '';
+			$token = isset( $_POST['form_challenge_token'] ) && is_string( $_POST['form_challenge_token'] ) ? sanitize_text_field( wp_unslash( $_POST['form_challenge_token'] ) ) : '';
 		}
 		if ( '' === $token || strlen( $token ) > 4096 ) {
 			return false;

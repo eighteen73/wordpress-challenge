@@ -36,7 +36,7 @@ class Turnstile extends Remote {
 	 * @return string Escaped widget markup.
 	 */
 	public function render( string $context, bool $inline = false ): string {
-		return sprintf( '<div class="e73-challenge" data-challenge="turnstile" data-context="%s" data-sitekey="%s"><div class="e73-challenge-widget"></div></div>', esc_attr( $context ), esc_attr( $this->options['turnstile_site'] ) );
+		return sprintf( '<div class="form-challenge" data-challenge="turnstile" data-context="%s" data-sitekey="%s"><div class="form-challenge-widget"></div></div>', esc_attr( $context ), esc_attr( $this->options['turnstile_site'] ) );
 	}
 
 	/**
