@@ -215,7 +215,8 @@ class Settings {
 			'threshold' === $name ? 'min="0" max="1" step="0.1"' : ''
 		);
 		if ( $secret && ! empty( $options[ $name ] ) ) {
-			printf( ' <span class="description">%s</span> <label><input type="checkbox" name="%s[clear_%s]" value="1"> %s</label>', esc_html__( 'Saved. Leave blank to keep.', 'challenge' ), esc_attr( self::OPTION ), esc_attr( $name ), esc_html__( 'Remove key', 'challenge' ) );
+			echo '<p class="description">' . esc_html__( 'Saved. Leave blank to keep.', 'challenge' ) . '</p>';
+			printf( '<p><label><input type="checkbox" name="%s[clear_%s]" value="1"> %s</label></p>', esc_attr( self::OPTION ), esc_attr( $name ), esc_html__( 'Remove key', 'challenge' ) );
 		}
 		if ( 'cap_site' === $name ) {
 			echo '<p class="description">' . esc_html__( 'Enter the site key (site ID) issued by your Cap provider, not a URL.', 'challenge' ) . '</p>';
