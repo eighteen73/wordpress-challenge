@@ -3,7 +3,7 @@
  * Plugin Name:       Challenge
  * Description:       CAPTCHA protection for forms, accounts and guest checkout.
  * Version:           0.1.0
- * Requires at least: 7.0
+ * Requires at least: 6.8
  * Requires PHP:      8.3
  * Author:            eighteen73
  * Author URI:        https://eighteen73.co.uk

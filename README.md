@@ -1,6 +1,6 @@
 # Challenge
 
-An opinionated CAPTCHA plugin for WordPress sites. Requires PHP 8.3 and WordPress 7+. Install as a normal WordPress plugin with Composer (`eighteen73/challenge`) and activate it in WordPress.
+An opinionated CAPTCHA plugin for WordPress sites. Requires PHP 8.3 and WordPress 6.8+. Install as a normal WordPress plugin with Composer (`eighteen73/challenge`) and activate it in WordPress. Gravity Forms 2.9+ and WooCommerce 9.8+ are optional integrations; the version guidance in Composer's `suggest` entries does not enforce minimum versions.
 
 ## Setup
 
