@@ -1,14 +1,8 @@
 # Challenge
 
-An opinionated CAPTCHA plugin for WordPress sites. Requires PHP 8.3 and WordPress 6.8+. Install as a normal WordPress plugin with Composer (`eighteen73/challenge`) and activate it in WordPress. Gravity Forms 2.9+ and WooCommerce 9.8+ are optional integrations; the version guidance in Composer's `suggest` entries does not enforce minimum versions.
+Challenge is our agency's shared anti-bot plugin for WordPress websites. It provides consistent CAPTCHA protection for the public-facing forms and customer journeys we commonly use: Gravity Forms submissions, WooCommerce guest checkout, account registration and password-reset requests.
 
-## Setup
-
-Open **Settings > Challenge**, choose one site-wide provider and save its credentials. Only the selected provider's controls are shown; switching providers keeps previously saved credentials. Cap is the selected provider initially, but has **no default server URL**. Enter the HTTPS base URL of your Cap instance or compatible hosted endpoint, its **site key (site ID)** and its secret key. Enter the server URL without the site key: Challenge constructs `/<site-key>/siteverify` and loads `/assets/widget.js` from that base URL, plus `/assets/floating.js` when floating mode is selected. Existing sites upgrading from a previous release must also enter their server URL. Cap's **Display** setting defaults to **Floating** (opens on submit); choose **Visible** to show the widget inline on protected forms. Turnstile uses Managed mode. Google reCAPTCHA supports separate v2 checkbox and v3 keys; the v3 score threshold defaults to 0.5. Leave a secret field blank to keep its saved value, or tick **Remove key** to delete it.
-
-The plugin does not enforce CAPTCHA until the selected provider is configured (server URL and both keys for Cap); administrators see a setup notice. Once configured, missing or invalid tokens and verification outages reject the submission. Site keys appear in page markup; secret keys are used only for server-side verification. Cap widget assets come from the configured server and the other providers load their own widget scripts.
-
-For Cap Standalone, enable its asset server (`ENABLE_ASSETS_SERVER=true`). Challenge sets the widget's WASM URLs **before** loading `widget.js`, pointing to `/assets/cap_wasm_bg.wasm` and `/assets/hashwx.wasm` on the configured server instead of jsDelivr. HashWX needs `WASM_VERSION` 0.0.8 or newer. Browsers without `DecompressionStream` also need `/assets/pako_inflate.min.js` on that server for Cap's instrumentation fallback; Cap Standalone does not serve this file by default. Challenge points the fallback there so the browser does not fetch it from jsDelivr, but those browsers will need the file hosted to complete a challenge. Compatible hosted endpoints must provide the same assets.
+Each website uses one configured provider: Cap, Cloudflare Turnstile or Google reCAPTCHA. Protection is focused on these supported submission points rather than site-wide bot filtering.
 
 ## Covered submissions
 
@@ -17,6 +11,18 @@ For Cap Standalone, enable its asset server (`ENABLE_ASSETS_SERVER=true`). Chall
 - WordPress registration and password-reset requests, plus WooCommerce My Account registration and password-reset requests.
 
 Login, comments, product reviews, and the final password-change step are not protected.
+
+## Installation
+
+Requires PHP 8.3 and WordPress 6.8+. Install as a normal WordPress plugin with Composer (`eighteen73/challenge`) and activate it in WordPress. Gravity Forms 2.9+ and WooCommerce 9.8+ are optional integrations; the version guidance in Composer's `suggest` entries does not enforce minimum versions.
+
+## Setup
+
+Open **Settings > Challenge**, choose one site-wide provider and save its credentials. Only the selected provider's controls are shown; switching providers keeps previously saved credentials. Cap is the selected provider initially, but has **no default server URL**. Enter the HTTPS base URL of your Cap instance or compatible hosted endpoint, its **site key (site ID)** and its secret key. Enter the server URL without the site key: Challenge constructs `/<site-key>/siteverify` and loads `/assets/widget.js` from that base URL, plus `/assets/floating.js` when floating mode is selected. Existing sites upgrading from a previous release must also enter their server URL. Cap's **Display** setting defaults to **Floating** (opens on submit); choose **Visible** to show the widget inline on protected forms. Turnstile uses Managed mode. Google reCAPTCHA supports separate v2 checkbox and v3 keys; the v3 score threshold defaults to 0.5. Leave a secret field blank to keep its saved value, or tick **Remove key** to delete it.
+
+The plugin does not enforce CAPTCHA until the selected provider is configured (server URL and both keys for Cap); administrators see a setup notice. Once configured, missing or invalid tokens and verification outages reject the submission. Site keys appear in page markup; secret keys are used only for server-side verification. Cap widget assets come from the configured server and the other providers load their own widget scripts.
+
+For Cap Standalone, enable its asset server (`ENABLE_ASSETS_SERVER=true`). Challenge sets the widget's WASM URLs **before** loading `widget.js`, pointing to `/assets/cap_wasm_bg.wasm` and `/assets/hashwx.wasm` on the configured server instead of jsDelivr. HashWX needs `WASM_VERSION` 0.0.8 or newer. Browsers without `DecompressionStream` also need `/assets/pako_inflate.min.js` on that server for Cap's instrumentation fallback; Cap Standalone does not serve this file by default. Challenge points the fallback there so the browser does not fetch it from jsDelivr, but those browsers will need the file hosted to complete a challenge. Compatible hosted endpoints must provide the same assets.
 
 ## Development
 
