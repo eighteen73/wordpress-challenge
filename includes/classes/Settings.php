@@ -221,7 +221,8 @@ class Settings {
 		if ( 'cap_site' === $name ) {
 			echo '<p class="description">' . esc_html__( 'Enter the site key (site ID) issued by your Cap provider, not a URL.', 'challenge' ) . '</p>';
 		} elseif ( 'cap_server' === $name ) {
-			echo '<p class="description">' . esc_html__( 'HTTPS base URL of your Cap server or hosted endpoint, without the site key.', 'challenge' ) . '</p>';
+			echo '<p class="description">' . esc_html__( 'Your Cap instance, e.g. https://cap.example.com. Do not include the site key.', 'challenge' ) . '</p>';
+			echo '<p class="description"><strong>' . esc_html__( 'Where are assets loaded from?', 'challenge' ) . '</strong><br>' . esc_html__( 'Challenges, scripts and WASM are loaded from the URL above if you have set ') . '<code>ENABLE_ASSETS_SERVER=true</code>' . esc_html__( ' on your server. Otherwise they\'ll come from Cap\'s public CDN.', 'challenge' ) . '</p>';
 		}
 	}
 
