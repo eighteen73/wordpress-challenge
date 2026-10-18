@@ -102,9 +102,10 @@ class Cap extends Remote {
 	public function render( string $context, bool $inline = false ): string {
 		$floating = ! $inline && 'visible' !== ( $this->options['cap_display'] ?? 'floating' );
 		return sprintf(
-			'<div class="form-challenge" data-challenge="cap" data-context="%s" data-floating="%s"><cap-widget data-cap-api-endpoint="%s"></cap-widget></div>',
+			'<div class="form-challenge" data-challenge="cap" data-context="%s" data-floating="%s" data-cap-endpoint="%s"><cap-widget data-cap-api-endpoint="%s"></cap-widget></div>',
 			esc_attr( $context ),
 			$floating ? 'true' : 'false',
+			esc_url( $this->endpoint() ),
 			esc_url( $this->endpoint() )
 		);
 	}
@@ -114,9 +115,9 @@ class Cap extends Remote {
 	 *
 	 * @param string $token   Submitted token.
 	 * @param string $context Form context.
-	 * @return bool Provider result.
+	 * @return bool|VerificationOutage Provider result.
 	 */
-	public function verify( string $token, string $context ): bool {
+	public function verify( string $token, string $context ): bool|VerificationOutage {
 		$result = $this->post(
 			$this->endpoint() . 'siteverify',
 			[
@@ -125,6 +126,6 @@ class Cap extends Remote {
 			],
 			true
 		);
-		return true === ( $result['success'] ?? false );
+		return $result instanceof VerificationOutage ? $result : true === ( $result['success'] ?? false );
 	}
 }

@@ -16,7 +16,7 @@ namespace Eighteen73\Challenge\Driver {
 	}
 
 	function is_wp_error( $value ) {
-		return false;
+		return $value instanceof \WP_Error;
 	}
 
 	function wp_remote_retrieve_response_code( $response ) {
@@ -47,6 +47,26 @@ namespace Eighteen73\Challenge\Driver {
 namespace Eighteen73\Challenge {
 	function get_option() {
 		return $GLOBALS['challenge_options'];
+	}
+
+	function apply_filters( $name, $value, ...$args ) {
+		return $GLOBALS['challenge_allow_fallback'] ?? $value;
+	}
+
+	function update_option( $name, $value, $autoload ) {
+		$GLOBALS['challenge_saved_options'][ $name ] = $value;
+	}
+
+	function error_log( $message ) {
+		$GLOBALS['challenge_logs'][] = $message;
+	}
+
+	function sanitize_email( $value ) {
+		return filter_var( $value, FILTER_SANITIZE_EMAIL );
+	}
+
+	function esc_html__( $value, $domain ) {
+		return htmlspecialchars( $value, ENT_QUOTES );
 	}
 
 	function is_user_logged_in() {
@@ -115,6 +135,14 @@ namespace {
 		public static function is_last_page( $form ) {
 			return self::$last_page;
 		}
+		public static function get_source_page( $id ) {
+			return $_POST[ 'gform_source_page_number_' . $id ] ?? 1;
+		}
+	}
+	class GFAPI {
+		public static function get_form( $id ) {
+			return $GLOBALS['challenge_forms'][ $id ] ?? false;
+		}
 	}
 	define( 'ABSPATH', '/' );
 	define( 'CHALLENGE_URL', 'https://example.org/wp-content/plugins/challenge/' );
@@ -127,6 +155,8 @@ namespace {
 			$this->code = $code;
 			$this->message = $message;
 		}
+		public function get_error_code() { return $this->code; }
+		public function get_error_message() { return $this->message; }
 	}
 
 	class WP_User {
@@ -149,6 +179,7 @@ namespace {
 		}
 	}
 
+	require __DIR__ . '/../includes/classes/Driver/VerificationOutage.php';
 	require __DIR__ . '/../includes/classes/Driver/Driver.php';
 	require __DIR__ . '/../includes/classes/Driver/Remote.php';
 	require __DIR__ . '/../includes/classes/Driver/Cap.php';
@@ -211,7 +242,7 @@ namespace {
 	check( str_contains( $cap->render( 'gf_12', true ), 'data-floating="false"' ), 'a placed Gravity Forms field stays inline with the floating default' );
 	$visible_cap = new \Eighteen73\Challenge\Driver\Cap( array_merge( $keys, [ 'cap_display' => 'visible' ] ) );
 	check( str_contains( $visible_cap->render( 'wc_checkout' ), 'data-floating="false"' ), 'visible presentation renders automatic widgets inline' );
-	check( ! $cap->verify( 'token', 'wp_register' ), 'Cap rejects provider outages' );
+	check( \Eighteen73\Challenge\Driver\VerificationOutage::Server === $cap->verify( 'token', 'wp_register' ), 'Cap distinguishes provider outages from rejection' );
 	$GLOBALS['challenge_response'] = [ 'status' => 200, 'body' => [ 'success' => true ] ];
 	check( $cap->verify( 'token', 'wp_register' ), 'Cap accepts a successful verification' );
 	check( 'https://cap.example.test/captcha/site/siteverify' === $GLOBALS['challenge_request'][0], 'Cap verifies against the configured server and site' );
@@ -228,7 +259,7 @@ namespace {
 	$_POST['gform_target_page_number_13'] = 999;
 	check( ! $gravity->validate( [ 'is_valid' => true, 'form' => [ 'id' => 13, 'fields' => [] ] ] )['is_valid'], 'posted non-zero target cannot bypass a resolved final submission' );
 	GFFormDisplay::$last_page = false;
-	check( $gravity->validate( [ 'is_valid' => true, 'form' => [ 'id' => 13, 'fields' => [] ] ] )['is_valid'], 'resolved intermediate pages do not consume a token' );
+	check( $gravity->validate( [ 'is_valid' => true, 'form' => [ 'id' => 14, 'fields' => [] ] ] )['is_valid'], 'resolved intermediate pages do not consume a token' );
 	GFFormDisplay::$last_page = true;
 	unset( $_POST['gform_target_page_number_13'] );
 	$settings = \Eighteen73\Challenge\Settings::instance();
@@ -291,6 +322,61 @@ namespace {
 	$errors = new WP_Error();
 	$wordpress->reset_errors( $errors, $user );
 	check( 'challenge_failed' === $errors->code, 'public WooCommerce reset requests still require verification' );
+	$_POST = [];
+	// Exercise the central policy for every provider, not just the transport classification.
+	foreach ( [ 'cap', 'turnstile', 'recaptcha_v2', 'recaptcha_v3' ] as $provider ) {
+		$GLOBALS['challenge_options'] = array_merge( $keys, [ 'driver' => $provider, 'gf_all' => 1 ] );
+		$challenge = \Eighteen73\Challenge\Challenge::instance();
+		foreach ( [ 500, 503, 599 ] as $status ) {
+			$GLOBALS['challenge_response'] = [ 'status' => $status, 'body' => [] ];
+			check( $challenge->verify( 'gf_20', 'outage-' . $status ), $provider . ' allows HTTP 5xx with a token' );
+		}
+		foreach ( [ 200, 301, 400, 401, 403, 429 ] as $status ) {
+			$GLOBALS['challenge_response'] = [ 'status' => $status, 'body' => [ 'success' => false ] ];
+			check( ! $challenge->verify( 'gf_20', 'rejected-' . $status ), $provider . ' rejects invalid responses, credentials and rate limits' );
+		}
+		foreach ( [ 6, 7, 28, 60 ] as $code ) {
+			$GLOBALS['challenge_response'] = new WP_Error( 'http_request_failed', 'cURL error ' . $code . ': transport failure' );
+			check( ( 60 !== $code ) === $challenge->verify( 'gf_20', 'transport-' . $code ), $provider . ' permits connectivity failures but not TLS errors' );
+		}
+		$GLOBALS['challenge_response'] = new WP_Error( 'http_request_failed', 'A valid URL was not provided.' );
+		check( ! $challenge->verify( 'gf_20', 'unsafe-url' ), $provider . ' blocks unclassified transport/configuration failures' );
+		$GLOBALS['challenge_response'] = [ 'status' => 503, 'body' => [] ];
+		check( ! $challenge->verify( 'gf_20', '' ), $provider . ' never bypasses missing tokens' );
+		check( ! $challenge->verify( 'gf_20', str_repeat( 'x', 4097 ) ), $provider . ' never bypasses oversized tokens' );
+		$GLOBALS['challenge_allow_fallback'] = false;
+		check( ! $challenge->verify( 'gf_20', 'disabled-fallback' ), $provider . ' honours the code-only fallback opt-out' );
+		unset( $GLOBALS['challenge_allow_fallback'] );
+		$count = count( $GLOBALS['challenge_logs'] );
+		check( $challenge->verify( 'gf_20', 'sensitive-token' ), 'outage allows submission' );
+		check( $challenge->verify( 'gf_20', 'sensitive-token' ), 'repeated hooks reuse the policy result' );
+		check( count( $GLOBALS['challenge_logs'] ) === $count + 1, 'one fallback log per verification in a request' );
+		check( ! str_contains( end( $GLOBALS['challenge_logs'] ), 'sensitive-token' ), 'fallback logs exclude tokens' );
+		check( [ 'time', 'provider', 'context', 'reason' ] === array_keys( $GLOBALS['challenge_saved_options']['form_challenge_last_fallback'] ), 'admin status contains only operational metadata' );
+	}
+	$GLOBALS['challenge_options'] = array_merge( $keys, [ 'driver' => 'cap', 'gf_all' => 1 ] );
+	$GLOBALS['challenge_response'] = [ 'status' => 200, 'body' => [ 'success' => true ] ];
+	$draft_form = [ 'id' => 21, 'fields' => [] ];
+	$_POST = [ 'gform_save' => 1, 'gform_source_page_number_21' => 2, 'input_1' => 'Retain my enquiry' ];
+	$gravity->guard_save( $draft_form );
+	check( ! isset( $_POST['gform_save'] ) && 2 === $_POST['gform_target_page_number_21'], 'unverified drafts re-enter validation on their current page' );
+	check( ! $gravity->validate( [ 'is_valid' => true, 'form' => $draft_form ] )['is_valid'], 'rejected draft cannot become a final entry' );
+	check( 'Retain my enquiry' === $_POST['input_1'], 'rejected draft preserves entered values' );
+	check( str_contains( $gravity->validation_message( '', $draft_form ), 'Verification failed' ), 'draft failures have inline feedback' );
+	$_POST = [ 'gform_save' => 1, 'form_challenge_token' => 'verified-save' ];
+	$gravity->guard_save( [ 'id' => 22, 'fields' => [] ] );
+	check( 1 === $_POST['gform_save'], 'verified drafts follow the normal save path' );
+	$GLOBALS['challenge_forms'][23] = [ 'id' => 23, 'fields' => [] ];
+	$_POST = [ 'gform_send_resume_link' => 23, 'gform_resume_email' => 'visitor@example.org', 'gform_resume_token' => 'draft-id' ];
+	$gravity->guard_resume_email();
+	check( '' === $_POST['gform_resume_email'] && 'draft-id' === $_POST['gform_resume_token'], 'unverified resume email cannot be sent or mutate the saved draft' );
+	$GLOBALS['challenge_forms'][24] = [ 'id' => 24, 'fields' => [] ];
+	$_POST = [ 'gform_send_resume_link' => 24, 'gform_resume_email' => 'visitor@example.org', 'form_challenge_token' => 'verified-email' ];
+	$gravity->guard_resume_email();
+	check( 'visitor@example.org' === $_POST['gform_resume_email'], 'verified resume email follows the normal notification path' );
+	$_POST = [ 'gform_send_resume_link' => [ 1 ], 'gform_resume_email' => 'visitor@example.org' ];
+	$gravity->guard_resume_email();
+	check( '' === $_POST['gform_resume_email'], 'array form IDs cannot bypass the resume-email guard through GF integer coercion' );
 	$_POST = [];
 	print "Provider, settings and integration verification checks passed.\n";
 }

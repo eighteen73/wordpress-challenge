@@ -54,9 +54,9 @@ class Recaptcha extends Remote {
 	 *
 	 * @param string $token   Submitted token.
 	 * @param string $context Form context.
-	 * @return bool Provider result.
+	 * @return bool|VerificationOutage Provider result.
 	 */
-	public function verify( string $token, string $context ): bool {
+	public function verify( string $token, string $context ): bool|VerificationOutage {
 		$result = $this->post(
 			'https://www.google.com/recaptcha/api/siteverify',
 			[
@@ -64,6 +64,9 @@ class Recaptcha extends Remote {
 				'response' => $token,
 			]
 		);
+		if ( $result instanceof VerificationOutage ) {
+			return $result;
+		}
 		if ( true !== ( $result['success'] ?? false ) || ! $this->hostname_matches( $result ) ) {
 			return false;
 		}

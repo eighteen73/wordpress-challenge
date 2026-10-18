@@ -47,7 +47,11 @@
 		if (!button || !widget || widget.dataset.challenge !== 'recaptcha_v3' || submitting) return;
 		event.preventDefault();
 		event.stopImmediatePropagation();
-		if (!window.grecaptcha?.execute || solving) return;
+		if (solving) return;
+		if (!window.grecaptcha?.execute || !window.grecaptcha?.ready) {
+			window.formChallenge.showError(widget);
+			return;
+		}
 		solving = true;
 		window.grecaptcha.ready(() => {
 			window.grecaptcha.execute(widget.dataset.sitekey, { action: 'wc_checkout' }).then((token) => {
@@ -55,7 +59,7 @@
 				submitting = true;
 				button.click();
 				submitting = false;
-			}).catch(() => window.alert('Verification failed. Please try again.'))
+			}).catch(() => window.formChallenge.showError(widget))
 				.finally(() => { solving = false; });
 		});
 	}, true);

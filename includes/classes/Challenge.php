@@ -11,6 +11,7 @@ use Eighteen73\Challenge\Driver\Cap;
 use Eighteen73\Challenge\Driver\Driver;
 use Eighteen73\Challenge\Driver\Recaptcha;
 use Eighteen73\Challenge\Driver\Turnstile;
+use Eighteen73\Challenge\Driver\VerificationOutage;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -72,7 +73,36 @@ class Challenge {
 			return false;
 		}
 
-		return $this->verified[ hash( 'sha256', $context . ':' . $token ) ] ??= $this->driver()->verify( $token, $context );
+		$provider = Settings::options()['driver'];
+		$key      = hash( 'sha256', $provider . ':' . $context . ':' . $token );
+		if ( array_key_exists( $key, $this->verified ) ) {
+			return $this->verified[ $key ];
+		}
+		$result = $this->driver()->verify( $token, $context );
+		if ( $result instanceof VerificationOutage ) {
+			/**
+			 * Allow submissions during transient server-side verification outages.
+			 *
+			 * @param bool   $allow    Whether to allow the submission. Defaults to true.
+			 * @param string $context Protected submission context.
+			 * @param string $provider Selected provider identifier.
+			 * @param string $reason   Sanitised outage category, never a remote error message.
+			 */
+			$allow = (bool) apply_filters( 'challenge_allow_outage_fallback', true, $context, $provider, $result->value );
+			if ( $allow ) {
+				$event = [
+					'time'     => time(),
+					'provider' => $provider,
+					'context'  => $context,
+					'reason'   => $result->value,
+				];
+				update_option( 'form_challenge_last_fallback', $event, false );
+				error_log( 'Challenge outage fallback: ' . wp_json_encode( $event ) ); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Operational event without credentials or submission data.
+			}
+			$result = $allow;
+		}
+		$this->verified[ $key ] = $result;
+		return $result;
 	}
 
 	/** Enqueue scripts for the selected provider and frontend widgets. */

@@ -265,7 +265,28 @@ class Settings {
 		foreach ( $places as $place ) {
 			echo '<li>' . esc_html( $place ) . '</li>';
 		}
-		echo '</ul><form action="options.php" method="post">';
+		echo '</ul>';
+		$fallback = get_option( 'form_challenge_last_fallback', [] );
+		echo '<h2>' . esc_html__( 'Verification outage fallback', 'challenge' ) . '</h2>';
+		echo '<p>' . esc_html__( 'By default, submissions with a token are accepted during connection failures, timeouts and HTTP 5xx verification outages. Agency code can disable this using the challenge_allow_outage_fallback filter. Missing or rejected tokens still block submissions.', 'challenge' ) . '</p>';
+		if ( is_array( $fallback ) && ! empty( $fallback['time'] ) ) {
+			printf(
+				'<p>%s</p>',
+				esc_html(
+					sprintf(
+						/* translators: 1: date, 2: provider, 3: context, 4: failure category. */
+						__( 'Last fallback: %1$s. Provider: %2$s. Submission: %3$s. Reason: %4$s.', 'challenge' ),
+						wp_date( 'Y-m-d H:i:s T', (int) $fallback['time'] ),
+						self::DRIVERS[ $fallback['provider'] ?? '' ] ?? '',
+						$fallback['context'] ?? '',
+						$fallback['reason'] ?? ''
+					)
+				)
+			);
+		} else {
+			echo '<p>' . esc_html__( 'No outage fallback has been recorded.', 'challenge' ) . '</p>';
+		}
+		echo '<form action="options.php" method="post">';
 		settings_fields( 'form_challenge' );
 		do_settings_sections( 'form-challenge' );
 		submit_button();

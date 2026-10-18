@@ -1,5 +1,5 @@
 {
-	"name": "eighteen73/challenge",
+	"name": "eighteen73/wordpress-challenge",
 	"description": "Opinionated CAPTCHA protection for WordPress",
 	"type": "wordpress-plugin",
 	"license": "GPL-2.0-or-later",

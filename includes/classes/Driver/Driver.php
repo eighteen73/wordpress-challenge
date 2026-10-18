@@ -35,7 +35,7 @@ interface Driver {
 	 *
 	 * @param string $token   Submitted provider token.
 	 * @param string $context Trusted form context.
-	 * @return bool Whether the provider accepted the token.
+	 * @return bool|VerificationOutage Acceptance, rejection or a transient provider outage.
 	 */
-	public function verify( string $token, string $context ): bool;
+	public function verify( string $token, string $context ): bool|VerificationOutage;
 }

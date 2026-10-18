@@ -31,9 +31,9 @@ abstract class Remote implements Driver {
 	 * @param string $url  Verification URL.
 	 * @param array  $body Posted credentials and token.
 	 * @param bool   $json Send JSON rather than form data.
-	 * @return array<string, mixed> Decoded response or an empty array.
+	 * @return array<string, mixed>|VerificationOutage Decoded response, rejection or transient outage.
 	 */
-	protected function post( string $url, array $body, bool $json = false ): array {
+	protected function post( string $url, array $body, bool $json = false ): array|VerificationOutage {
 		$args = [
 			'timeout'     => 5,
 			'redirection' => 0,
@@ -43,7 +43,19 @@ abstract class Remote implements Driver {
 			$args['headers'] = [ 'Content-Type' => 'application/json' ];
 		}
 		$response = wp_safe_remote_post( $url, $args );
-		if ( is_wp_error( $response ) || 200 !== wp_remote_retrieve_response_code( $response ) ) {
+		if ( is_wp_error( $response ) ) {
+			// WP also uses http_request_failed for unsafe URLs and TLS/configuration errors.
+			// Only recognise explicit connectivity/timeout failures; unknown errors stay closed.
+			if ( 'http_request_failed' === $response->get_error_code() && preg_match( '/cURL error (?:5|6|7|28):|connection (?:refused|timed out)|network is unreachable|could not resolve host|php_network_getaddresses/i', $response->get_error_message() ) ) {
+				return VerificationOutage::Connection;
+			}
+			return [];
+		}
+		$status = wp_remote_retrieve_response_code( $response );
+		if ( $status >= 500 && $status <= 599 ) {
+			return VerificationOutage::Server;
+		}
+		if ( 200 !== $status ) {
 			return [];
 		}
 		$data = json_decode( wp_remote_retrieve_body( $response ), true );

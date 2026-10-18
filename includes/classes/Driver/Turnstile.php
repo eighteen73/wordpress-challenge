@@ -44,9 +44,9 @@ class Turnstile extends Remote {
 	 *
 	 * @param string $token   Submitted token.
 	 * @param string $context Form context.
-	 * @return bool Provider result.
+	 * @return bool|VerificationOutage Provider result.
 	 */
-	public function verify( string $token, string $context ): bool {
+	public function verify( string $token, string $context ): bool|VerificationOutage {
 		$result = $this->post(
 			'https://challenges.cloudflare.com/turnstile/v0/siteverify',
 			[
@@ -54,6 +54,6 @@ class Turnstile extends Remote {
 				'response' => $token,
 			]
 		);
-		return true === ( $result['success'] ?? false ) && $this->hostname_matches( $result );
+		return $result instanceof VerificationOutage ? $result : true === ( $result['success'] ?? false ) && $this->hostname_matches( $result );
 	}
 }
