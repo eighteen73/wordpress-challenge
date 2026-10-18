@@ -8,7 +8,7 @@ Each website uses one configured provider: Cap, Cloudflare Turnstile or Google r
 
 - Gravity Forms, including AJAX forms. **Automatic protection** is enabled by default and protects every form. Uncheck it to protect only forms containing a **Challenge** field in the Gravity Forms editor. With automatic protection enabled, adding the field gives the widget deliberate inline placement, regardless of Cap's site-wide Display setting. Cap uses the selected display mode for automatically protected forms; Turnstile and reCAPTCHA v2 appear beside submit; reCAPTCHA v3 is invisible. On multi-page forms, place the field on the final page.
 - Guest checkout via WooCommerce classic checkout and the Checkout Block. Logged-in checkout is excluded.
-- WordPress registration and password-reset requests, plus WooCommerce My Account registration and password-reset requests.
+- WordPress registration and password-reset requests, plus WooCommerce My Account registration and password-reset requests. Authorised password-reset emails sent from WordPress user management do not require a CAPTCHA.
 
 Login, comments, product reviews, and the final password-change step are not protected.
 
@@ -26,8 +26,8 @@ For Cap Standalone, enable its asset server (`ENABLE_ASSETS_SERVER=true`). Chall
 
 ## Development
 
-The provider implementations use `Driver\Driver` for widget markup, asset enqueueing, configuration checks and verification. Drivers own their script dependencies and pre-load configuration, including Cap's asset overrides and floating script order. The WordPress, Gravity Forms and WooCommerce integrations use `Challenge::verify()` to enforce server-side checks. Gravity Forms verification uses its resolved final-page state. Checkout Block tokens travel under `extensions.form-challenge.token` and are verified before the Store API checkout callback runs. The Checkout Block client currently uses WooCommerce's `__internalSetExtensionData` action; check compatibility when upgrading WooCommerce.
+The provider implementations use `Driver\Driver` for widget markup, asset enqueueing, configuration checks and verification. Drivers own their script dependencies and pre-load configuration, including Cap's asset overrides and floating script order. The WordPress, Gravity Forms and WooCommerce integrations use `Challenge::verify()` to enforce server-side checks. Gravity Forms verification uses its resolved final-page state. Its reCAPTCHA v3 integration uses the asynchronous `gform/submission/pre_submission` filter to obtain a fresh token before forward submissions, including Next requests that can become final submissions through conditional page visibility. Checkout Block tokens travel under `extensions.form-challenge.token` and are verified before the Store API checkout callback runs, with case-insensitive route matching consistent with WordPress. The Checkout Block client currently uses WooCommerce's `__internalSetExtensionData` action; check compatibility when upgrading WooCommerce.
 
 There is no CSS file or JavaScript build step: the small browser and settings scripts in `assets/` are shipped directly. Run `composer install` and `composer lint` for the agency PHP coding standard; `php tests/verify-drivers.php` exercises provider, Store API and Gravity Forms protection, and `node --check` on each script in `assets/` checks JavaScript syntax.
 
-Run `node tests/verify-checkout-reset.cjs` for the classic and block checkout Cap retry regression checks. These checks exercise error handlers in isolation; end-to-end browser testing is still required.
+Run `node tests/verify-checkout-reset.cjs` for the classic and block checkout Cap retry regression checks, and `node tests/verify-gravity-submission.cjs` for Gravity Forms v3 token generation, retries and provider failures. These checks exercise integrations in isolation; end-to-end browser testing is still required.

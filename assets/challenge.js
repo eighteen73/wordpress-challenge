@@ -2,6 +2,7 @@
 	'use strict';
 
 	let counter = 0;
+	let gravityFormsRegistered = false;
 	const selectors = '.form-challenge:not([data-initialised])';
 
 	function tokenField(form) {
@@ -63,12 +64,41 @@
 		document.querySelectorAll(selectors).forEach(initialise);
 	}
 
+	function registerGravityForms() {
+		if (gravityFormsRegistered || !window.gform?.utils?.addAsyncFilter) return;
+		window.gform.utils.addAsyncFilter('gform/submission/pre_submission', async (data) => {
+			if (data.abort || !['submit', 'next'].includes(data.submissionType)) return data;
+			const widget = data.form.querySelector('.form-challenge[data-challenge="recaptcha_v3"]');
+			if (!widget) return data;
+			// A Next request can become the final submission when following pages are hidden.
+			// Generate a fresh token for each forward request; PHP verifies only the final page.
+			setToken(widget, '');
+			try {
+				if (!window.grecaptcha?.ready || !window.grecaptcha?.execute) throw new Error('reCAPTCHA unavailable');
+				await new Promise((resolve) => window.grecaptcha.ready(resolve));
+				const token = await window.grecaptcha.execute(widget.dataset.sitekey, { action: widget.dataset.context });
+				if (!token) throw new Error('reCAPTCHA returned no token');
+				setToken(widget, token);
+			} catch {
+				data.abort = true;
+				window.alert('Verification failed. Please try again.');
+			}
+			return data;
+		});
+		gravityFormsRegistered = true;
+	}
+
+	document.addEventListener('gform/theme/scripts_loaded', registerGravityForms);
+	registerGravityForms();
+
 	document.addEventListener('submit', (event) => {
 		const form = event.target;
 		const widget = form.querySelector('.form-challenge');
 		if (!widget) return;
 		// The Checkout Block has its own place-order flow and Store API token transport.
 		if (widget.dataset.context === 'wc_checkout' && form.closest('.wc-block-checkout')) return;
+		// Gravity Forms owns submission and retry handling through its asynchronous filter.
+		if (gravityFormsRegistered && widget.dataset.context.startsWith('gf_') && widget.dataset.challenge === 'recaptcha_v3') return;
 		const input = tokenField(form);
 		if (widget.dataset.challenge === 'recaptcha_v3' && !form.dataset.formChallengeSubmitting) {
 			event.preventDefault();

@@ -53,6 +53,14 @@ namespace Eighteen73\Challenge {
 		return false;
 	}
 
+	function is_admin() {
+		return $GLOBALS['challenge_admin'] ?? false;
+	}
+
+	function current_user_can( $capability, $user_id ) {
+		return 'edit_user' === $capability && $user_id === ( $GLOBALS['challenge_editable_user'] ?? null );
+	}
+
 	function __( $message ) {
 		return $message;
 	}
@@ -114,7 +122,15 @@ namespace {
 	class GF_Field {}
 
 	class WP_Error {
-		public function __construct( public string $code, public string $message ) {}
+		public function __construct( public string $code = '', public string $message = '' ) {}
+		public function add( $code, $message ) {
+			$this->code = $code;
+			$this->message = $message;
+		}
+	}
+
+	class WP_User {
+		public function __construct( public int $ID ) {}
 	}
 
 	class WP_REST_Request {
@@ -144,6 +160,7 @@ namespace {
 	require __DIR__ . '/../includes/classes/GravityForms.php';
 	require __DIR__ . '/../includes/classes/GravityField.php';
 	require __DIR__ . '/../includes/classes/WooCommerce.php';
+	require __DIR__ . '/../includes/classes/WordPress.php';
 
 	function check( bool $condition, string $case ): void {
 		if ( ! $condition ) {
@@ -246,9 +263,34 @@ namespace {
 	$woo = \Eighteen73\Challenge\WooCommerce::instance();
 	$missing = new WP_REST_Request( 'POST', '/wc/store/v1/checkout' );
 	check( $woo->store_checkout( null, [], $missing ) instanceof WP_Error, 'guest Store API checkout rejects missing tokens before processing' );
+	foreach ( [ '/wc/store/v1/CHECKOUT', '/wc/store/v1/CheckOut', '/wc/store/Checkout' ] as $route ) {
+		check( $woo->store_checkout( null, [], new WP_REST_Request( 'POST', $route ) ) instanceof WP_Error, 'route casing cannot bypass guest checkout verification: ' . $route );
+	}
 	$other_route = new WP_REST_Request( 'POST', '/wc/store/v1/cart' );
 	check( null === $woo->store_checkout( null, [], $other_route ), 'other Store API routes are unaffected' );
 	$valid = new WP_REST_Request( 'POST', '/wc/store/v1/checkout', [ 'extensions' => [ 'form-challenge' => [ 'token' => 'fresh' ] ] ] );
 	check( null === $woo->store_checkout( null, [], $valid ), 'verified guest checkout reaches the route callback' );
+	$wordpress = \Eighteen73\Challenge\WordPress::instance();
+	$user = new WP_User( 123 );
+	$_POST = [ 'action' => 'send-password-reset', 'user_id' => 123 ];
+	$GLOBALS['challenge_admin'] = true;
+	$GLOBALS['challenge_editable_user'] = 123;
+	$errors = new WP_Error();
+	$wordpress->reset_errors( $errors, $user );
+	check( '' === $errors->code, 'authorised user-management reset emails do not require a public CAPTCHA' );
+	$GLOBALS['challenge_editable_user'] = 456;
+	$errors = new WP_Error();
+	$wordpress->reset_errors( $errors, $user );
+	check( 'challenge_failed' === $errors->code, 'an admin request without permission for the target user cannot bypass verification' );
+	$GLOBALS['challenge_admin'] = false;
+	$GLOBALS['challenge_editable_user'] = 123;
+	$errors = new WP_Error();
+	$wordpress->reset_errors( $errors, $user );
+	check( 'challenge_failed' === $errors->code, 'spoofed admin action parameters on a public reset do not bypass verification' );
+	$_POST = [ 'wc_reset_password' => 'true' ];
+	$errors = new WP_Error();
+	$wordpress->reset_errors( $errors, $user );
+	check( 'challenge_failed' === $errors->code, 'public WooCommerce reset requests still require verification' );
+	$_POST = [];
 	print "Provider, settings and integration verification checks passed.\n";
 }

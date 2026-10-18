@@ -19,7 +19,7 @@ class WordPress {
 		add_filter( 'registration_errors', [ $this, 'registration_errors' ] );
 		add_action( 'lostpassword_form', [ $this, 'reset_widget' ] );
 		// Also runs for WooCommerce reset requests; use a distinct context for each form.
-		add_action( 'lostpassword_post', [ $this, 'reset_errors' ] );
+		add_action( 'lostpassword_post', [ $this, 'reset_errors' ], 10, 2 );
 	}
 
 	/** Render the registration challenge. */
@@ -48,9 +48,14 @@ class WordPress {
 	/**
 	 * Reject unverified WordPress or WooCommerce reset requests.
 	 *
-	 * @param \WP_Error $errors Mutable validation errors.
+	 * @param \WP_Error      $errors    Mutable validation errors.
+	 * @param \WP_User|false $user_data Account receiving the reset email, if found.
 	 */
-	public function reset_errors( \WP_Error $errors ): void {
+	public function reset_errors( \WP_Error $errors, $user_data = false ): void {
+		// Core user-management screens already authorise and nonce-check these requests.
+		if ( is_admin() && $user_data instanceof \WP_User && current_user_can( 'edit_user', $user_data->ID ) ) {
+			return;
+		}
 		$context = isset( $_POST['wc_reset_password'] ) ? 'wc_reset_request' : 'wp_reset_request';
 		if ( ! Challenge::instance()->verify( $context ) ) {
 			$errors->add( 'challenge_failed', __( 'Verification failed. Please try again.', 'challenge' ) );

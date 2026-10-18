@@ -103,7 +103,8 @@ class WooCommerce {
 	 * @return mixed Original response or a verification error.
 	 */
 	public function store_checkout( $response, $handler, \WP_REST_Request $request ) {
-		if ( null !== $response || ! Challenge::instance()->active() || is_user_logged_in() || 'POST' !== $request->get_method() || ! preg_match( '~^/wc/store(?:/v[0-9]+)?/checkout$~', $request->get_route() ) ) {
+		// WordPress REST route matching is case-insensitive.
+		if ( null !== $response || ! Challenge::instance()->active() || is_user_logged_in() || 'POST' !== $request->get_method() || ! preg_match( '~^/wc/store(?:/v[0-9]+)?/checkout$~i', $request->get_route() ) ) {
 			return $response;
 		}
 		$extensions = $request->get_param( 'extensions' );
